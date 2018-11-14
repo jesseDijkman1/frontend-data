@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
+  <script src="https://d3js.org/d3.v5.js"></script>
+  <title>Document</title>
+</head>
+<body>
+  <h1>Data vis</h1>
+  <input id="query" type="text">
+  <button id="sendQuery"></button>
+<script>
+document.getElementById('sendQuery').addEventListener('click', () => {
+  var query = document.getElementById('query').value
+  d3.json(`http://localhost:3000/data?q=${query}`).then(data => console.log(data))
+})
+</script>
+</body>
+</html>
