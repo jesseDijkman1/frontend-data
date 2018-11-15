@@ -12,11 +12,7 @@
   <h1>Data vis</h1>
   <input id="query" type="text">
   <button id="sendQuery"></button>
-<script>
-document.getElementById('sendQuery').addEventListener('click', () => {
-  var query = document.getElementById('query').value
-  d3.json(`http://localhost:3000/data?q=${query}`).then(data => console.log(data))
-})
-</script>
+
+<script src='js/graph.js'></script>
 </body>
 </html>
