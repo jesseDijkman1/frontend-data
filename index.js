@@ -13,52 +13,20 @@ const client = new OBA({
   secret: process.env.SECRET
 });
 
-// function refineData(data) {
-//   return new Promise((resolve, reject) => {
-//     client.get('refine', {
-//       rctx: JSON.parse(res).aquabrowser.meta.rctx,
-//       count: 39,
-//       facets: 'Genre'
-//     })
-//     .then(res => resolve(r))
-//     .then(err => reject(err))
-//   })
-// }
-
-// function getData(query) {
-//   return new Promise((resolve, reject) => {
-//     client.get('search', {
-//       q: query,
-//       librarian: 'true',
-//       refine: 'true',
-//       facet: [`pubYear(2000)`, `type(book)`],
-//       pagesize: 1
-//     })
-//     .then(res => {
-//       refineData(JSON.parse(res))
-//         .then(data => resolve(data))
-//         .catch(err => reject(err))
-//     })
-//     .catch(err => console.log(err))
-//   })
-// }
-
-  // .then(res => console.log(res)) // JSON results
-  // .catch(err => console.log(err))
 function refineData(rctx) {
-
   return new Promise((resolve, reject) => {
-
-      client.get('refine', {
-        rctx: rctx,
-        count: 39,
-        facets: 'Genre'
-      }).then(data => {
-        resolve(JSON.parse(data))
-      })
-
-      .catch(err => reject('Error occured while refining the data'))
+    client.get('refine', {
+      rctx: rctx,
+      count: 39,
+      facets: 'Genre'
+    }).then(data => {
+      resolve(JSON.parse(data))
     })
+
+    .catch(err => {
+      reject('Error while refining data')
+    })
+  })
 }
 
 function getData(query, year) {
@@ -69,7 +37,6 @@ function getData(query, year) {
       q: query,
       librarian: 'true',
       refine: 'true',
-
       facet: [`pubYear(${year})`, `type(book)`],
       pagesize: 1
     }).then(data => {
@@ -77,44 +44,37 @@ function getData(query, year) {
       resolve(data)
 
     }).catch(err => {
-
-      reject('Error occurred while getting the data')
+      reject(err)
     })
   })
   }
 
-
 function makeRequests(search, startingYr, endingYr) {
-
   return new Promise((resolve1, reject1) => {
-  let promises = [];
+    let promises = [];
 
+    for (let j = startingYr; j <= endingYr; j++) {
+      promises.push(new Promise((resolve2, reject2) => {
 
-  for (let i = startingYr; i <= endingYr; i++) {
-    promises.push(new Promise((resolve, reject) => {
-      getData(search, i).then(data => {
+        getData(search, j).then(data1 => {
+          refineData(JSON.parse(data1).aquabrowser.meta.rctx).then(data2 => {
 
-        refineData(JSON.parse(data).aquabrowser.meta.rctx).then(res => {
+            data2.aquabrowser.year = j;
 
-          res.aquabrowser.year = i;
+            resolve2(data2)
 
-          resolve(res)
-        })
+          }).catch(err => console.log(err))
 
-      }).catch(err => console.log(err))
+        }).catch(err => console.log(err))
+      }))
+    }
 
-    }))
-  }
-
-
-  Promise.all(promises).then(data => {
-
-    resolve1(data)
-  });
+    Promise.all(promises).then(vals => {
+      resolve1(vals)
+    })
   })
-
 }
-
+let i;
 
 const app = express();
 
@@ -126,11 +86,35 @@ app.get('/', (req, res) => res.sendFile('/index.html', {root: __dirname }));
 
 // Get request for getting the data
 app.get('/data', (req, res) => {
+  i = 0;
   let search = req.query.q;
-  let startingYear = req.query.startingYr;
-  let endingYear = req.query.q.endingYr;
+  // let startingYear = req.query.startingYr;
+  let startingYear = 1920;
+  let endingYear = 2005;
+  // let endingYear = req.query.q.endingYr;
+  var yearRanges = [{s: 1920, e: 1939}, {s: 1940, e: 1959}, {s: 1960, e: 1979}, {s: 1980, e: 1999}, {s: 2000, e: 2005}]
 
-  makeRequests(search, 1999, 2005).then(data => res.send(JSON.stringify(data)))
+  let data = [];
+
+
+  function extraStep() {
+      i++
+      waiter()
+  }
+
+  function waiter() {
+    makeRequests(search, yearRanges[i].s, yearRanges[i].e).then(val => {
+      data.push(val)
+      if (i < yearRanges.length - 1) {
+        extraStep()
+      } else {
+        res.send(data)
+      }
+
+    })
+  }
+  waiter()
+
 })
 
 // app.get('/data', (req, res) => )
