@@ -1,12 +1,11 @@
+require('dotenv').config()
+
 const express = require('express');
 const fs = require('fs')
 const cors = require('cors');
-require('dotenv').config()
+const OBA = require('oba-api');
 
 const port = 3000;
-
-
-const OBA = require('oba-api');
 
 const client = new OBA({
   public: process.env.PUBLIC,
@@ -14,16 +13,19 @@ const client = new OBA({
 });
 
 function refineData(rctx) {
+
   return new Promise((resolve, reject) => {
+
     client.get('refine', {
       rctx: rctx,
       count: 39,
       facets: 'Genre'
     }).then(data => {
+
       resolve(JSON.parse(data))
     })
-
     .catch(err => {
+
       reject('Error while refining data')
     })
   })
@@ -42,18 +44,18 @@ function getData(query, year) {
     }).then(data => {
 
       resolve(data)
-
-    }).catch(err => {
+    })
+    .catch(err => {
       reject(err)
     })
   })
   }
 
-function makeRequests(search, startingYr, endingYr) {
+function makeRequests(search, yearRange) {
   return new Promise((resolve1, reject1) => {
     let promises = [];
 
-    for (let j = startingYr; j <= endingYr; j++) {
+    for (let j = yearRange.start; j <= yearRange.end; j++) {
       promises.push(new Promise((resolve2, reject2) => {
 
         getData(search, j).then(data1 => {
@@ -74,7 +76,28 @@ function makeRequests(search, startingYr, endingYr) {
     })
   })
 }
-let i;
+
+
+function defineRanges(startingYear, endingYear) {
+  let yearRanges = []
+  let rangesAmount = Math.floor((endingYear - startingYear) / 20);
+
+  for (let i = 0; i <= rangesAmount; i++) {
+    let newRangeStart = startingYear + i * 20;
+    let newRangeEnd;
+
+    if ((newRangeStart + 19) > endingYear) {
+      newRangeEnd = endingYear
+    } else {
+      newRangeEnd = newRangeStart + 19
+    }
+    yearRanges.push({start: newRangeStart, end: newRangeEnd})
+
+  }
+  return yearRanges
+}
+
+// console.log(yearRanges)//
 
 const app = express();
 
@@ -86,27 +109,25 @@ app.get('/', (req, res) => res.sendFile('/index.html', {root: __dirname }));
 
 // Get request for getting the data
 app.get('/data', (req, res) => {
-  i = 0;
-  let search = req.query.q;
-  // let startingYear = req.query.startingYr;
-  let startingYear = 1920;
-  let endingYear = 2005;
-  // let endingYear = req.query.q.endingYr;
-  var yearRanges = [{s: 1920, e: 1939}, {s: 1940, e: 1959}, {s: 1960, e: 1979}, {s: 1980, e: 1999}, {s: 2000, e: 2005}]
-
   let data = [];
+  let i = 0;
+  let search = req.query.q;
+  let startingYear = parseInt(req.query.ys);
+  let endingYear = parseInt(req.query.ye);
+  let yearRanges = defineRanges(startingYear, endingYear)
 
 
-  function extraStep() {
+
+  function nextYears() {
       i++
       waiter()
   }
 
   function waiter() {
-    makeRequests(search, yearRanges[i].s, yearRanges[i].e).then(val => {
-      data.push(val)
+    makeRequests(search, yearRanges[i]).then(val => {
+      data = data.concat(val)
       if (i < yearRanges.length - 1) {
-        extraStep()
+        nextYears()
       } else {
         res.send(data)
       }

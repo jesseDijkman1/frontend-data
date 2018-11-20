@@ -10,8 +10,21 @@
 </head>
 <body>
   <h1>Data vis</h1>
-  <input id="query" type="text">
-  <button id="sendQuery"></button>
+  <header>
+    <input id="query" type="text" value="oorlog">
+    <input id="yearStart" type="text">
+    <span>t/m</span>
+    <input id="yearEnd" type="text">
+    <select name="" id="">
+      <option value="top_3">Top 3 Genres</option>
+      <option value="bottom_3">Lowest 3 genres</option>
+      <option value="none">Show all</option>
+    </select>
+    <button id="sendQuery">Search</button>
+  </header>
+  <section id="chart-container">
+
+  </section>
 
 <script src='js/graph.js'></script>
 </body>
