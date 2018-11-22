@@ -12,12 +12,12 @@ const client = new OBA({
   secret: process.env.SECRET
 });
 
-function refineData(rctx) {
+function refineData(token) {
 
   return new Promise((resolve, reject) => {
 
     client.get('refine', {
-      rctx: rctx,
+      rctx: token,
       count: 39,
       facets: 'Genre'
     }).then(data => {
@@ -97,8 +97,6 @@ function defineRanges(startingYear, endingYear) {
   return yearRanges
 }
 
-// console.log(yearRanges)//
-
 const app = express();
 
 app.use(cors());
@@ -115,7 +113,6 @@ app.get('/data', (req, res) => {
   let startingYear = parseInt(req.query.ys);
   let endingYear = parseInt(req.query.ye);
   let yearRanges = defineRanges(startingYear, endingYear)
-
 
 
   function nextYears() {

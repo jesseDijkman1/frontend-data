@@ -1,3 +1,25 @@
-/* path.area-chart:hover {
-  fill: 'red'
-} */
+ul {
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  list-style-type: none;
+}
+
+#legend ul li label:hover {
+  cursor: pointer;
+}
+
+#legend ul li:not(.selected) .customCheckbox {
+  background-color: darkgrey !important;
+}
+
+#legend ul li:not(.selected) {
+  opacity: .4;
+}
+
+
+.highlight {
+  fill: 'black'
+}

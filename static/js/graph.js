@@ -7,9 +7,6 @@ const searchBtn = document.getElementById('sendQuery')
 const fallBackStart = new Date().getFullYear() - 10;
 const fallBackEnd = new Date().getFullYear();
 
-// const fallBackStart = 1920;
-// const fallBackEnd = 1930;
-
 (function() {
   startYear.value = fallBackStart;
   endYear.value = fallBackEnd;
@@ -45,6 +42,7 @@ searchBtn.addEventListener('click', () => {
 
 // =============================
 let data;
+let filteredOut = [];
 let allGenres = [];
 let dataAll;
 
@@ -60,7 +58,6 @@ const xScale = d3.scaleTime()
   .range([svgPadding, svgWidth - svgPadding]);
 
 const yScale = d3.scaleLinear()
-  // .domain([])
   .range([svgPadding, svgHeight - svgPadding])
 
 const xAxis = d3.axisBottom(xScale)
@@ -76,7 +73,10 @@ const area = d3.area()
   .x((d, i) => xScale(d.year))
   .y1(d => yScale(d.amt))
 
-
+const legend = d3.select('aside#legend ul')
+  .style('width', '200px')
+  .style('min-height', `${svgHeight}px`)
+  .style('border', 'solid 1px')
 
 const svg = d3.select('#chart-container')
   .append('svg')
@@ -94,6 +94,28 @@ svg.append('g')
   .classed('y-axis', true)
   .attr('transform', `translate(${svgPadding}, 0)`)
   .call(yAxis);
+
+function groupAll(all) {
+
+  dataAll = all.map(d => {
+    let vals = (d.value.data) ? d.value.data : d.value;
+
+    return vals.filter(dv => {
+
+      if (!filteredOut.map(fd => fd.key).includes(d.key)) {
+        return dv
+      }
+    })
+
+  }).flat()
+}
+
+function sortData(all) {
+
+  data = all.sort((d1, d2) => {
+    return d3.descending(d1.value.totalAmt, d2.value.totalAmt)
+  })
+}
 
 function formatData(r) {
 
@@ -131,30 +153,6 @@ function formatData(r) {
     })
     .entries(r)
 
-    // console.log(data)
-  // data = d3.nest()
-  //   .key((d) => d.aquabrowser.year)
-  //   .rollup(v => {
-  //     if (!v[0].aquabrowser.facets) {
-  //       return {}
-  //     } else if (!v[0].aquabrowser.facets.facet.value.length) {
-  //       return [{
-  //         genre: v[0].aquabrowser.facets.facet.value.id,
-  //         amt: parseInt(v[0].aquabrowser.facets.facet.value.count),
-  //         year: v[0].aquabrowser.year
-  //       }]
-  //     } else {
-  //         return v[0].aquabrowser.facets.facet.value.map(d => {
-  //             return {
-  //               genre: d.id,
-  //               amt: parseInt(d.count),
-  //               year: v[0].aquabrowser.year
-  //             }
-  //           })
-  //     }
-  //   })
-  //   .entries(r);
-
   let allYears = data.map(d => d.key);
 
   data.forEach(d => {
@@ -173,17 +171,6 @@ function formatData(r) {
       allGenres.push(d.value.genre)
     }
   })
-
-  // data.forEach(d => {
-  //   d.value.forEach(v => {
-  //     if (v.genre) {
-  //       if (!allGenres.includes(v.genre)) {
-  //         allGenres.push(v.genre)
-  //       }
-  //     }
-  //   })
-  // })
-  //
 
   allGenres.forEach(genre => {
 
@@ -217,32 +204,7 @@ function formatData(r) {
     })
   })
 
-        // if (!d.value.genre || d.value.genre !== genre) {
-        //   let tempSave = d.value.genre;
-        //   console.log('lol',tempSave)
-        //   // d.value.push({
-        //   //   genre: genre,
-        //   //   amt: 0,
-        //   //   year: parseInt(d.key)
-        //   // })
-        // }
-
-    //   }
-    // })
-  // })
-
-  // console.log(data)
-  // allGenres.forEach(g => {
-  //   data.forEach(d => {
-  //
-  //     if (!d.value.find(dv => dv.genre == g)) {
-  //       d.value.push({genre: g, amt: 0, year: parseInt(d.key)})
-  //     }
-  //   })
-  // })
-  //
-
-  dataAll = data.map(d => d.value).flat()
+  groupAll(data)
 
   data = d3.nest()
     .key(d => d.genre)
@@ -254,45 +216,55 @@ function formatData(r) {
     })
     .entries(dataAll);
 
-    data.sort((d1, d2) => {
-      return d3.descending(d1.value.totalAmt, d2.value.totalAmt)
+  sortData(data)
+
+  newGraph()
+
+}
+
+function highlight() {
+  let target = d3.select(d3.event.target);
+  let genre = target.attr('data-genre');
+  let fill = target.attr('fill');
+  let elClass = target.attr('class');
+
+  d3.selectAll(`.${elClass}`)
+    .style('opacity', 0.2);
+
+  d3.select(d3.event.target)
+    .attr('fill', genreColor(genre))
+    .style('opacity', 1);
+
+  legend.selectAll('li')
+    .style('opacity', 0.2)
+
+  legend.select(`li[data-genre=${genre}]`)
+    .style('opacity', 1)
+
+  d3.select(d3.event.target)
+    .on('mouseleave', () => {
+      d3.select(this)
+        .attr('fill', fill);
+
+      d3.selectAll(`.${elClass}`)
+        .style('opacity', 1);
+
+      legend.selectAll('li')
+        .style('opacity', 1)
     })
-
-  updateGraph()
 }
 
-function setStroke(data, index, elements) {
-  if (index >= 11 && index < 22) {
-    d3.select(elements[index])
-      .attr('stroke-dasharray', ('3, 3'))
-  } else if (index >= 22 && index < 33) {
-    d3.select(elements[index])
-      .attr('stroke-dasharray', ('15, 3'))
-  } else if (index >= 33) {
-    d3.select(elements[index])
-      .attr('stroke-dasharray', ('25, 10'))
-  }
-}
-
-function strokeColor(d) {
-  if (data.length < 10) {
-    return colorScaleSmall(d)
-  } else {
-    return colorScaleLarge(d)
-  }
-}
-
-function updateGraph() {
-  // console.log(data)
+function newGraph() {
+  updateLegend()
   colorScaleLarge.domain(allGenres)
   colorScaleSmall.domain(allGenres)
-  // console.log(dataAll)
+
   xScale.domain([d3.min(dataAll, d => d.year), d3.max(dataAll, d => d.year)])
 
-  // area.y0(yScale(0))
   yScale.domain([0, d3.max(dataAll, d => d.amt)].reverse())
-  // console.log(data)
+
   area.y0(yScale(0))
+
   d3.select('.x-axis')
     .transition()
     .call(xAxis);
@@ -303,34 +275,142 @@ function updateGraph() {
 
   svg.selectAll('path.area-chart')
     .remove();
-    // console.log(data)
+
   svg.selectAll('path.area-chart')
     .data(data)
     .enter()
     .append('path')
       .classed('area-chart', true)
+      .attr('data-genre', d => d.key)
       .attr('fill', 'rgba(255,255,255,.2)')
-      // .attr('data-lol', d => d.key)
-      .attr('stroke', d => strokeColor(d.key))
+      .attr('stroke', d => genreColor(d.key))
       .attr('stroke-width', 2)
       .attr('d', d => area(d.value.data))
-      .each(setStroke)
-
-  function lightUp() {
-    d3.event.preventDefault()
-    d3.select(d3.event.target)
-      .attr('fill', d => strokeColor(d.key))
-  }
-
-  function lightDown() {
-    d3.event.preventDefault()
-    d3.select(d3.event.target)
-      .attr('fill', 'rgba(255,255,255,.2)')
-  }
 
   svg.selectAll('path.area-chart')
-    .on('mouseover', lightUp)
-    .on('mouseleave', lightDown)
-  // svg.selectAll('path.line-chart')
-  //
+    .on('mouseover', highlight)
+
+}
+
+function genreColor(d) {
+  if (data.length < 10) {
+    return colorScaleSmall(d)
+  } else {
+    return colorScaleLarge(d)
+  }
+}
+
+function updateGraph() {
+  updateLegend()
+  xScale.domain([d3.min(dataAll, d => d.year), d3.max(dataAll, d => d.year)])
+
+  yScale.domain([0, d3.max(dataAll, d => d.amt)].reverse())
+
+  area.y0(yScale(0))
+
+  d3.select('.x-axis')
+    .transition()
+    .call(xAxis);
+
+  d3.select('.y-axis')
+    .transition()
+    .call(yAxis);
+
+  svg.selectAll('path.area-chart')
+    .transition()
+    .attr('d', d => area(d.value.data))
+}
+
+function filterGraph(genre, action) {
+  if (action === 'hide') {
+
+    data.find((d, i) => {
+      if (d.key === genre) {
+
+        filteredOut.push(d)
+        return data.splice(i, 1)
+      }
+    })
+
+    groupAll(data)
+    updateGraph()
+
+    d3.select(`path.area-chart[data-genre=${genre}]`)
+      .transition()
+      .style('opacity', 0);
+
+      return;
+  }
+
+  if (action === 'show') {
+
+    filteredOut.find((d, i) => {
+      if (d.key === genre) {
+
+        data.push(d)
+        return filteredOut.splice(i, 1)
+      }
+    })
+
+    sortData(data)
+
+    groupAll(data)
+    updateGraph()
+
+    d3.select(`path.area-chart[data-genre=${genre}]`)
+      .transition()
+      .style('opacity', 1);
+
+      return;
+  }
+
+}
+
+function legendFilter() {
+  if (!d3.event.target.checked) {
+
+    filterGraph(d3.event.target.value, 'hide')
+
+    d3.select(d3.event.target.parentNode)
+      .classed('selected', false)
+  } else {
+
+    filterGraph(d3.event.target.value, 'show')
+
+    d3.select(d3.event.target.parentNode)
+      .classed('selected', true)
+  }
+}
+
+function updateLegend() {
+  let legendGenre = legend.selectAll('li')
+    .data(data)
+    .enter()
+    .append('li')
+    .classed('selected', true)
+    .attr('data-genre', d => d.key)
+
+  let genreLabel = legendGenre.append('label')
+    .attr('for', d => d.key)
+
+  genreLabel
+    .append('span')
+    .classed('customCheckbox', true)
+    .style('display', 'inline-block')
+    .style('width', '10px')
+    .style('height', '10px')
+    .style('border', 'solid 1px')
+    .style('background-color', d => genreColor(d.key))
+
+  genreLabel
+    .append('span')
+    .text(d => d.key)
+
+  legendGenre.append('input')
+    .attr('id', d => d.key)
+    .attr('type', 'checkbox')
+    .style('display', 'none')
+    .property('checked', true)
+    .attr('value', d => d.key)
+    .on('change', legendFilter)
 }
