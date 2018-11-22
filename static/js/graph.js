@@ -75,7 +75,11 @@ const legend = d3.select('aside#legend ul')
   .style('min-height', `${svgHeight}px`)
   .style('border', 'solid 1px')
 
-
+const resetBtn = d3.select('#chart-container')
+  .append('button')
+  .text("Reset")
+  .attr('id', 'reset')
+  .on('click', reset)
 
 const svg = d3.select('#chart-container')
   .append('svg')
@@ -98,31 +102,47 @@ const allData = (all) => all.map(d => d.value.data).flat();
 
 const filter = {
   memory: null,
-  single: () => {
+  single: (resetTarget) => {
+    if (resetTarget._groups) {
 
-    let target = d3.event.target;
-    let genre = target.value;
-    let parent = d3.select(target.parentNode)
-    let index = displayableData.findIndex(d => d.key == genre);
+      d3.selectAll(resetTarget._groups[0]).each((d, i, nodes) => {
 
-    if (parent.classed('selected')) {
+        d3.select(nodes[i])
+          .classed('selected', true);
 
-      parent.classed('selected', false)
+        d3.select('path.showOnly')
+          .classed('showOnly', false);
+
+        displayableData.push(d)
+        sortData(displayableData)
+      })
+      updateGraph()
     } else {
 
-      parent.classed('selected', true)
+      let target = d3.event.target;
+      let genre = target.value;
+      let parent = d3.select(target.parentNode)
+      let index = displayableData.findIndex(d => d.key == genre);
+
+      if (parent.classed('selected')) {
+
+        parent.classed('selected', false)
+      } else {
+
+        parent.classed('selected', true)
+      }
+
+      if (index >= 0) {
+
+        displayableData.splice(index, 1);
+      } else {
+
+        displayableData.push(data.find(d => d.key === genre))
+        sortData(displayableData)
+      }
+      filter.memory = displayableData;
+      updateGraph()
     }
-
-    if (index >= 0) {
-
-      displayableData.splice(index, 1);
-    } else {
-
-      displayableData.push(data.find(d => d.key === genre))
-      sortData(displayableData)
-    }
-    filter.memory = displayableData;
-    updateGraph()
   },
   allButOne: () => {
     let target = d3.select(d3.event.target);
@@ -132,21 +152,18 @@ const filter = {
     if (target.classed('showOnly')) {
 
       displayableData = filter.memory;
+
       target.classed('showOnly', false)
-      console.log(displayableData, data)
 
       displayableData.forEach(d => {
         legend.select(`li[data-genre=${d.key}]`)
           .classed('selected', true)
       })
-      // legend.selectAll('li')
-      //   .classed('selected', true);
 
     } else {
-      // target.classed('showOnly', true)
+
       filter.memory = displayableData;
       displayableData = [targetData]
-
 
       legend.selectAll('li.selected')
         .classed('selected', false);
@@ -265,6 +282,10 @@ function formatData(r) {
   colorScale.domain(allGenres)
 
   newGraph()
+}
+
+function reset() {
+  filter.single(legend.selectAll('li:not(.selected)'))
 }
 
 function highlight() {
