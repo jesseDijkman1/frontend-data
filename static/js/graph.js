@@ -26,8 +26,6 @@ function checkYears(start, end) {
   }
 }
 
-
-
 searchBtn.addEventListener('click', () => {
   if (!search.value) {
     return alert('Please enter a search value')
@@ -42,16 +40,15 @@ searchBtn.addEventListener('click', () => {
 
 // =============================
 let data;
-let filteredOut = [];
 let allGenres = [];
 let dataAll;
+let displayableData = [];
 
 var svgWidth = 500;
 var svgHeight = 500;
 var svgPadding = 25;
 
-const colorScaleLarge = d3.scaleOrdinal(d3.schemeSpectral[11]);
-const colorScaleSmall = d3.scaleOrdinal(d3.schemeCategory10);
+const colorScale = d3.scaleOrdinal(d3.schemeSpectral[11]);
 
 const xScale = d3.scaleTime()
   .domain([1999, 2018])
@@ -84,7 +81,6 @@ const svg = d3.select('#chart-container')
   .attr('height', svgHeight)
   .style('border', 'solid 1px');
 
-
 svg.append('g')
   .classed('x-axis', true)
   .attr('transform', `translate(0, ${svgHeight - svgPadding})`)
@@ -95,30 +91,43 @@ svg.append('g')
   .attr('transform', `translate(${svgPadding}, 0)`)
   .call(yAxis);
 
-function groupAll(all) {
+const allData = (all) => all.map(d => d.value.data).flat();
 
-  dataAll = all.map(d => {
-    let vals = (d.value.data) ? d.value.data : d.value;
+const filter = {
+  single: () => {
+    let target = d3.event.target;
+    let genre = target.value;
+    let parent = d3.select(target.parentNode)
+    let index = displayableData.findIndex(d => d.key == genre);
 
-    return vals.filter(dv => {
+    if (parent.classed('selected')) {
 
-      if (!filteredOut.map(fd => fd.key).includes(d.key)) {
-        return dv
-      }
-    })
+      parent.classed('selected', false)
+    } else {
 
-  }).flat()
+      parent.classed('selected', true)
+    }
+
+    if (index >= 0) {
+
+      displayableData.splice(index, 1);
+    } else {
+
+      displayableData.push(data.find(d => d.key === genre))
+      sortData(displayableData)
+    }
+    console.log(displayableData)
+    updateGraph()
+  }
 }
 
 function sortData(all) {
-
-  data = all.sort((d1, d2) => {
+  all = all.sort((d1, d2) => {
     return d3.descending(d1.value.totalAmt, d2.value.totalAmt)
   })
 }
 
 function formatData(r) {
-
   data = d3.nest()
     .key(d => d.aquabrowser.year)
     .rollup(v => {
@@ -146,7 +155,6 @@ function formatData(r) {
               amt: parseInt(d.count),
               year: v[0].aquabrowser.year
             }
-
           })
         }
       }
@@ -185,7 +193,6 @@ function formatData(r) {
               amt: 0,
               year: parseInt(d.key)
             })
-
           }
       } else {
 
@@ -204,22 +211,23 @@ function formatData(r) {
     })
   })
 
-  groupAll(data)
-
   data = d3.nest()
-    .key(d => d.genre)
+    .key(d => d)
     .rollup(v => {
       return {
-        data: v,
-        totalAmt: d3.sum(v, l => l.amt)
+        data: data.map(d => d.value.find(dv => dv.genre == v[0])),
+        totalAmt: d3.sum(data.map(d => d.value.find(dv => dv.genre == v[0])), l => l.amt)
       }
     })
-    .entries(dataAll);
+    .entries(allGenres);
 
   sortData(data)
 
-  newGraph()
+  displayableData = displayableData.concat(data)
 
+  colorScale.domain(allGenres)
+
+  newGraph()
 }
 
 function highlight() {
@@ -232,7 +240,7 @@ function highlight() {
     .style('opacity', 0.2);
 
   d3.select(d3.event.target)
-    .attr('fill', genreColor(genre))
+    .attr('fill', colorScale(genre))
     .style('opacity', 1);
 
   legend.selectAll('li')
@@ -256,12 +264,10 @@ function highlight() {
 
 function newGraph() {
   updateLegend()
-  colorScaleLarge.domain(allGenres)
-  colorScaleSmall.domain(allGenres)
 
-  xScale.domain([d3.min(dataAll, d => d.year), d3.max(dataAll, d => d.year)])
+  xScale.domain([d3.min(allData(displayableData), d => d.year), d3.max(allData(displayableData), d => d.year)])
 
-  yScale.domain([0, d3.max(dataAll, d => d.amt)].reverse())
+  yScale.domain([0, d3.max(allData(displayableData), d => d.amt)].reverse())
 
   area.y0(yScale(0))
 
@@ -277,13 +283,13 @@ function newGraph() {
     .remove();
 
   svg.selectAll('path.area-chart')
-    .data(data)
+    .data(displayableData)
     .enter()
     .append('path')
       .classed('area-chart', true)
       .attr('data-genre', d => d.key)
       .attr('fill', 'rgba(255,255,255,.2)')
-      .attr('stroke', d => genreColor(d.key))
+      .attr('stroke', d => colorScale(d.key))
       .attr('stroke-width', 2)
       .attr('d', d => area(d.value.data))
 
@@ -292,19 +298,12 @@ function newGraph() {
 
 }
 
-function genreColor(d) {
-  if (data.length < 10) {
-    return colorScaleSmall(d)
-  } else {
-    return colorScaleLarge(d)
-  }
-}
-
 function updateGraph() {
   updateLegend()
-  xScale.domain([d3.min(dataAll, d => d.year), d3.max(dataAll, d => d.year)])
 
-  yScale.domain([0, d3.max(dataAll, d => d.amt)].reverse())
+  xScale.domain([d3.min(allData(data), d => d.year), d3.max(allData(data), d => d.year)])
+
+  yScale.domain([0, d3.max(allData(displayableData), d => d.amt)].reverse())
 
   area.y0(yScale(0))
 
@@ -317,69 +316,11 @@ function updateGraph() {
     .call(yAxis);
 
   svg.selectAll('path.area-chart')
+    .data(displayableData)
     .transition()
+    .attr('data-genre', d => d.key)
+    .attr('stroke', d => colorScale(d.key))
     .attr('d', d => area(d.value.data))
-}
-
-function filterGraph(genre, action) {
-  if (action === 'hide') {
-
-    data.find((d, i) => {
-      if (d.key === genre) {
-
-        filteredOut.push(d)
-        return data.splice(i, 1)
-      }
-    })
-
-    groupAll(data)
-    updateGraph()
-
-    d3.select(`path.area-chart[data-genre=${genre}]`)
-      .transition()
-      .style('opacity', 0);
-
-      return;
-  }
-
-  if (action === 'show') {
-
-    filteredOut.find((d, i) => {
-      if (d.key === genre) {
-
-        data.push(d)
-        return filteredOut.splice(i, 1)
-      }
-    })
-
-    sortData(data)
-
-    groupAll(data)
-    updateGraph()
-
-    d3.select(`path.area-chart[data-genre=${genre}]`)
-      .transition()
-      .style('opacity', 1);
-
-      return;
-  }
-
-}
-
-function legendFilter() {
-  if (!d3.event.target.checked) {
-
-    filterGraph(d3.event.target.value, 'hide')
-
-    d3.select(d3.event.target.parentNode)
-      .classed('selected', false)
-  } else {
-
-    filterGraph(d3.event.target.value, 'show')
-
-    d3.select(d3.event.target.parentNode)
-      .classed('selected', true)
-  }
 }
 
 function updateLegend() {
@@ -400,7 +341,7 @@ function updateLegend() {
     .style('width', '10px')
     .style('height', '10px')
     .style('border', 'solid 1px')
-    .style('background-color', d => genreColor(d.key))
+    .style('background-color', d => colorScale(d.key))
 
   genreLabel
     .append('span')
@@ -412,5 +353,5 @@ function updateLegend() {
     .style('display', 'none')
     .property('checked', true)
     .attr('value', d => d.key)
-    .on('change', legendFilter)
+    .on('change', filter.single)
 }

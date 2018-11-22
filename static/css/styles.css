@@ -16,7 +16,7 @@ li {
 }
 
 #legend ul li:not(.selected) {
-  opacity: .4;
+  opacity: .4 !important;
 }
 
 
