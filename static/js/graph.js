@@ -2,7 +2,7 @@ let search = document.getElementById('query');
 let startYear = document.getElementById('yearStart');
 let endYear = document.getElementById('yearEnd');
 
-const searchBtn = document.getElementById('sendQuery')
+const searchBtn = document.getElementById('sendQuery');
 
 const fallBackStart = new Date().getFullYear() - 10;
 const fallBackEnd = new Date().getFullYear();
@@ -75,11 +75,14 @@ const legend = d3.select('aside#legend ul')
   .style('min-height', `${svgHeight}px`)
   .style('border', 'solid 1px')
 
+
+
 const svg = d3.select('#chart-container')
   .append('svg')
   .attr('width', svgWidth)
   .attr('height', svgHeight)
   .style('border', 'solid 1px');
+
 
 svg.append('g')
   .classed('x-axis', true)
@@ -94,7 +97,9 @@ svg.append('g')
 const allData = (all) => all.map(d => d.value.data).flat();
 
 const filter = {
+  memory: null,
   single: () => {
+
     let target = d3.event.target;
     let genre = target.value;
     let parent = d3.select(target.parentNode)
@@ -116,7 +121,40 @@ const filter = {
       displayableData.push(data.find(d => d.key === genre))
       sortData(displayableData)
     }
-    console.log(displayableData)
+    filter.memory = displayableData;
+    updateGraph()
+  },
+  allButOne: () => {
+    let target = d3.select(d3.event.target);
+    let genre = target.attr('data-genre');
+    let targetData = displayableData.find(d => d.key === genre);
+
+    if (target.classed('showOnly')) {
+
+      displayableData = filter.memory;
+      target.classed('showOnly', false)
+      console.log(displayableData, data)
+
+      displayableData.forEach(d => {
+        legend.select(`li[data-genre=${d.key}]`)
+          .classed('selected', true)
+      })
+      // legend.selectAll('li')
+      //   .classed('selected', true);
+
+    } else {
+      // target.classed('showOnly', true)
+      filter.memory = displayableData;
+      displayableData = [targetData]
+
+
+      legend.selectAll('li.selected')
+        .classed('selected', false);
+
+      legend.select(`li[data-genre=${genre}]`)
+        .classed('selected', true)
+    }
+
     updateGraph()
   }
 }
@@ -224,7 +262,6 @@ function formatData(r) {
   sortData(data)
 
   displayableData = displayableData.concat(data)
-
   colorScale.domain(allGenres)
 
   newGraph()
@@ -263,11 +300,11 @@ function highlight() {
 }
 
 function newGraph() {
-  updateLegend()
 
+  updateLegend()
   xScale.domain([d3.min(allData(displayableData), d => d.year), d3.max(allData(displayableData), d => d.year)])
 
-  yScale.domain([0, d3.max(allData(displayableData), d => d.amt)].reverse())
+  yScale.domain([0, d3.max(allData(data), d => d.amt)].reverse())
 
   area.y0(yScale(0))
 
@@ -293,8 +330,10 @@ function newGraph() {
       .attr('stroke-width', 2)
       .attr('d', d => area(d.value.data))
 
+
   svg.selectAll('path.area-chart')
     .on('mouseover', highlight)
+    .on('click', filter.allButOne)
 
 }
 
@@ -317,10 +356,33 @@ function updateGraph() {
 
   svg.selectAll('path.area-chart')
     .data(displayableData)
+    .enter()
+    .append('path')
+    .classed('area-chart', true)
+    .attr('fill', 'rgba(255,255,255,.2)')
+
+
+  svg.selectAll('path.area-chart')
+    .data(displayableData)
+    .exit()
+    .remove()
+
+  svg.selectAll('path.area-chart')
+    .data(displayableData)
     .transition()
     .attr('data-genre', d => d.key)
     .attr('stroke', d => colorScale(d.key))
     .attr('d', d => area(d.value.data))
+
+  if (displayableData.length === 1) {
+    svg.select('path.area-chart')
+      .classed('showOnly', true)
+  }
+
+  svg.selectAll('path.area-chart')
+    .on('mouseover', highlight)
+    .on('click', filter.allButOne)
+
 }
 
 function updateLegend() {

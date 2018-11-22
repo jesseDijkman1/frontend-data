@@ -7,6 +7,18 @@ li {
   list-style-type: none;
 }
 
+#chart-container {
+  position: relative;
+  width: 500px;
+  height: 500px;
+}
+
+#reset {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
 #legend ul li label:hover {
   cursor: pointer;
 }
