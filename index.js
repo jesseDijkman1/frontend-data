@@ -102,10 +102,8 @@ const app = express();
 app.use(cors());
 app.use(express.static('static'));
 
-// Open the home page
 app.get('/', (req, res) => res.sendFile('/index.html', {root: __dirname }));
 
-// Get request for getting the data
 app.get('/data', (req, res) => {
   let data = [];
   let i = 0;
@@ -113,7 +111,6 @@ app.get('/data', (req, res) => {
   let startingYear = parseInt(req.query.ys);
   let endingYear = parseInt(req.query.ye);
   let yearRanges = defineRanges(startingYear, endingYear)
-
 
   function nextYears() {
       i++
@@ -134,8 +131,6 @@ app.get('/data', (req, res) => {
   waiter()
 
 })
-
-// app.get('/data', (req, res) => )
 
 app.listen(3000, () => {
   console.log('Listening to port 3000');
