@@ -461,9 +461,6 @@ function updateLegend() {
     .append('span')
     .classed('customCheckbox', true)
     .style('display', 'inline-block')
-    .style('width', '10px')
-    .style('height', '10px')
-    .style('border', 'solid 1px')
     .style('background-color', d => colorScale(d.key));
 
   genreLabel
