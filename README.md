@@ -11,7 +11,8 @@ For this course I will be fetching data from the oba API and then create a visua
 ---
 
 ## Concept
-[Image]
+![img](frontend-data/IMG_20181122_0001_NEW-1.png)
+
 I want to make a stacked barchart that is going to display the genres in each year. I will give users the option to give their own search query. I will also give them a year range option; so they only get the data from the years they choose to see.
 
 [Image]
