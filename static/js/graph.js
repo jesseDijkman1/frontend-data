@@ -26,27 +26,45 @@ function checkYears(start, end) {
   }
 }
 
-searchBtn.addEventListener('click', () => {
-  if (!search.value) {
-    return alert('Please enter a search value')
-  }
+searchBtn.addEventListener('click', requestData)
+  function requestData() {
 
-  checkYears(startYear, endYear);
+    if (!search.value) {
+      return alert('Please enter a search value')
+    }
 
-  d3.json(`http://localhost:3000/data?q=${search.value}&ys=${startYear.value}&ye=${endYear.value}`).then(res => {
-      formatData(res)
-    })
-})
+    checkYears(startYear, endYear);
 
-// =============================
+    d3.json(`http://localhost:3000/data?q=${search.value}&ys=${startYear.value}&ye=${endYear.value}`).then(res => {
+        formatData(res)
+      })
+}
+
 let data;
 let allGenres = [];
-let dataAll;
 let displayableData = [];
 
-var svgWidth = 500;
-var svgHeight = 500;
-var svgPadding = 25;
+// var svgWidth = 800;
+function calcProperties(attr) {
+  let prop = d3.select('#chart-container').style(attr);
+
+  prop = Math.floor(prop.replace('px', ''));
+  return prop;
+}
+
+// function calcHeight() {
+//   let containerHeight = d3.select('#chart-container').style('height');
+//
+//   containerHeight = Math.floor(containerHeight.replace('px', ''));
+//   console.log(containerHeight)
+//   return containerHeight;
+// }
+
+var svgWidth = calcProperties('width')
+var svgHeight = calcProperties('height')
+// var svgHeight = d3.select('#chart-container').style('height')
+var svgPadding = 40;
+
 
 const colorScale = d3.scaleOrdinal(d3.schemeSpectral[11]);
 
@@ -71,9 +89,6 @@ const area = d3.area()
   .y1(d => yScale(d.amt))
 
 const legend = d3.select('aside#legend ul')
-  .style('width', '200px')
-  .style('min-height', `${svgHeight}px`)
-  .style('border', 'solid 1px')
 
 const resetBtn = d3.select('#chart-container')
   .append('button')
@@ -85,7 +100,7 @@ const svg = d3.select('#chart-container')
   .append('svg')
   .attr('width', svgWidth)
   .attr('height', svgHeight)
-  .style('border', 'solid 1px');
+  // .style('border', 'solid 1px');
 
 
 svg.append('g')
@@ -102,6 +117,24 @@ const allData = (all) => all.map(d => d.value.data).flat();
 
 const filter = {
   memory: null,
+  initial: (all) => {
+    let selectFilter = d3.select('#main-filter')._groups[0][0];
+    let options = selectFilter.options;
+    let index = options.selectedIndex;
+    let selectVal = options[index].value;
+
+    if (selectVal == 'top_3') {
+      return all.filter((d, i) => i <= 2);
+    }
+
+    if (selectVal == 'bottom_3') {
+      return all.filter((d, i, a) => i >= a.length - 3);
+    }
+
+    if (selectVal == 'none') {
+      return all
+    }
+  },
   single: (resetTarget) => {
     if (resetTarget._groups) {
 
@@ -183,6 +216,11 @@ function sortData(all) {
 }
 
 function formatData(r) {
+  allGenres = [];
+  displayableData = [];
+
+  filter.memory = null;
+
   data = d3.nest()
     .key(d => d.aquabrowser.year)
     .rollup(v => {
@@ -215,8 +253,6 @@ function formatData(r) {
       }
     })
     .entries(r)
-
-  let allYears = data.map(d => d.key);
 
   data.forEach(d => {
 
@@ -276,10 +312,19 @@ function formatData(r) {
     })
     .entries(allGenres);
 
+  legend.selectAll('li').remove()
+
   sortData(data)
 
+  data = filter.initial(data)
+
   displayableData = displayableData.concat(data)
+
   colorScale.domain(allGenres)
+
+  xAxis.ticks(d3.max(allData(data), d => d.year) - d3.min(allData(data), d => d.year))
+
+
 
   newGraph()
 }
@@ -287,6 +332,8 @@ function formatData(r) {
 function reset() {
   filter.single(legend.selectAll('li:not(.selected)'))
 }
+
+d3.se
 
 function highlight() {
   let target = d3.select(d3.event.target);
@@ -321,8 +368,15 @@ function highlight() {
 }
 
 function newGraph() {
-
   updateLegend()
+
+  d3.select('#main-filter')
+    .on('change', () => {
+      requestData()
+    })
+
+
+
   xScale.domain([d3.min(allData(displayableData), d => d.year), d3.max(allData(displayableData), d => d.year)])
 
   yScale.domain([0, d3.max(allData(data), d => d.amt)].reverse())
@@ -331,7 +385,8 @@ function newGraph() {
 
   d3.select('.x-axis')
     .transition()
-    .call(xAxis);
+    .call(xAxis)
+
 
   d3.select('.y-axis')
     .transition()
@@ -359,6 +414,7 @@ function newGraph() {
 }
 
 function updateGraph() {
+
   updateLegend()
 
   xScale.domain([d3.min(allData(data), d => d.year), d3.max(allData(data), d => d.year)])
@@ -405,6 +461,8 @@ function updateGraph() {
     .on('click', filter.allButOne)
 
 }
+
+
 
 function updateLegend() {
   let legendGenre = legend.selectAll('li')

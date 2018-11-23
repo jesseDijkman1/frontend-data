@@ -1,3 +1,13 @@
+html {
+  font-size: 16px;
+}
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
 ul {
   margin: 0;
   padding: 0;
@@ -7,11 +17,60 @@ li {
   list-style-type: none;
 }
 
-#chart-container {
-  position: relative;
-  width: 500px;
-  height: 500px;
+#page-layout {
+  display: grid;
+  width: 90vw;
+  height: 90vh;
+  border: solid 1px purple;
+  margin: 5vh auto;
+  grid-template-columns: 4fr 1fr;
+  grid-template-rows: 1fr 5fr;
 }
+
+#page-layout > header {
+  border: solid 1px red;
+  grid-row: 1 / 2;
+  display: flex;
+
+}
+#page-layout > header .wrapper {
+  width: 100%;
+}
+#page-layout > header .wrapper h3 {}
+#page-layout > header .wrapper input[type="text"] {
+  height: 2.5rem;
+  width: 100%;
+}
+
+#page-layout > header .wrapper {
+  border: solid 1px orange
+}
+
+#page-layout > header .wrapper div {
+  display: flex;
+}
+
+#page-layout > header #sendQuery {
+  display: block;
+  width: 30%;
+}
+
+#page-layout #chart-container {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+  border: solid 1px blue;
+  position: relative;
+}
+
+#page-layout #legend {
+  border: solid 1px green;
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+}
+
+#page-layout #legend h1 {}
+#page-layout #legend ul {}
+#page-layout #legend ul li {}
 
 #reset {
   position: absolute;
@@ -29,9 +88,4 @@ li {
 
 #legend ul li:not(.selected) {
   opacity: .4 !important;
-}
-
-
-.highlight {
-  fill: 'black'
 }
